@@ -26,7 +26,7 @@ class StringDataset(Dataset):
             fist_set = self.transform(fist_set)
             second_set = self.transform(second_set)
         sample  = {
-            'fist_text': torch.FloatTensor(fist_set), 
+            'first_text': torch.FloatTensor(fist_set), 
             'second_text': torch.FloatTensor(second_set), 
             'loss_mul': 1. + float(first_id==second_id)*(len(self.data)-1), 
             'label': float(first_id==second_id)

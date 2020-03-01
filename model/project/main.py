@@ -15,9 +15,6 @@ trainset = dataset_creator.get_train_iterator()
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=256, shuffle=True, num_workers=th_count, pin_memory=True)
 
 validationset = dataset_creator.get_validation_iterator()
-validationloader = torch.utils.data.DataLoader(validationset, batch_size=512, shuffle=False, num_workers=th_count, pin_memory=True)
+validationloader = torch.utils.data.DataLoader(validationset, batch_size=256, shuffle=False, num_workers=th_count, pin_memory=True)
 
 fit(net, trainloader, validationloader, epochs=100)
-
-loss_writer.close()
-accuracy_writer.close()
