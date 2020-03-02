@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from sklearn.metrics import f1_score, accuracy_score
 
 class ContrastiveLoss(torch.nn.Module):
     """
@@ -23,20 +24,21 @@ class ContrastiveLoss(torch.nn.Module):
         losses = label * distances + (1 + -1 * label) * F.relu(self.margin - (distances + self.eps).sqrt()).pow(2)
         return losses
 
-def accuracy( net, dataloader, epoch=1):
+def metrics( net, dataloader, epoch=1):
     net.eval()
     correct = 0
     total = 0
+    predictions = []
+    labels = []
     with torch.no_grad():
         for data in dataloader:
-            inputs1, inputs2, loss_mul, labels = data['first_text'].to('cuda'), data['second_text'].to('cuda'), data['loss_mul'].to('cuda'), data['label'].to('cuda')
+            inputs1, inputs2, loss_mul, label = data['first_text'].to('cuda'), data['second_text'].to('cuda'), data['loss_mul'].to('cuda'), data['label'].to('cuda')
             outputs1, outputs2 = net(inputs1, inputs2)
             loss = (outputs2 - outputs1).pow(2).sum(1)
             predicted = loss < 0.5
-            correct += (predicted == labels).sum().item()
-            total += labels.size(0)
-    acc = 100 * correct / total
-    return acc
+            predictions+=predicted.cpu().numpy().tolist()
+            labels+=label.cpu().numpy().tolist()
+    return f1_score(labels, predictions), accuracy_score(labels, predictions)
 
 def fit_epoch(net, trainloader, writer, epoch=1):
     net.train()
@@ -89,19 +91,19 @@ def validate_epoch(net, validationloader, writer, epoch=1):
 def fit(net, trainloader, validationloader, epochs=1000):
     log_datatime = str(datetime.now().time())
     writer = SummaryWriter(os.path.join('logs', log_datatime))
-    best_acc = 0
+    best_f1 = 0
     for epoch in range(epochs):
         fit_epoch(net, trainloader, writer, epoch=epoch)
         val_loss = validate_epoch(net, validationloader, writer, epoch)
         # train_acc = accuracy(net, validationloader, epoch)
-        val_acc = accuracy(net, trainloader, epoch)
-        writer.add_scalars('acc', {'val_acc':val_acc}, epoch)
-        if best_acc < val_acc:
-            best_acc = val_acc
-            print('Saving model with acc: {}'.format(val_acc))
+        val_f1_score, val_acc = metrics(net, trainloader, epoch)
+        writer.add_scalars('metrics', {'val_acc':val_acc, 'val_f1_score':val_f1_score}, epoch)
+        if best_f1 < val_f1_score:
+            best_f1 = val_f1_score
+            print('Epoch {}. Saving model with acc: {}, and f1 score: {}'.format(epoch, val_acc, val_f1_score))
             chp_dir = 'checkpoints'
             os.makedirs((chp_dir), exist_ok=True)
             torch.save(net, os.path.join(chp_dir, 'checkpoints.pth'))
         else:
-            print('Epoch {} acc: {}'.format(epoch, val_acc))
+            print('Epoch {} acc: {}, and f1 score: {}'.format(epoch, val_acc, val_f1_score))
     print('Finished Training')
