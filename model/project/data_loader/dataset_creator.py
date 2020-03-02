@@ -4,18 +4,14 @@ from sklearn.model_selection import train_test_split
 from data_loader.iterator import StringDataset
 from torchvision import transforms
 from data_loader.data_provider import getNamingDictFromFile, getUniversalNames
+from data_loader.augmentation import RandomShuffle, SequencePadder, StringVectorizer, RandomStarPlace, RandomCharDelete
 
 class DatasetCreator:
     def __init__(self, root_dir, names_file):
         self.universal_names = getUniversalNames(names_file)
         self.data = self.parse_data(root_dir)
         self.corpus, self.ocurences = self.get_corpus(self.data)
-        self.encoded_data = [self.string_vectorizer(x, self.corpus) for x in self.data]
-        self.train_data, self.validation_data = train_test_split(self.encoded_data, test_size=0.2)
-
-    def string_vectorizer(self, text_vector, alphabet):
-        parsed_vector = [[[0 if char != letter else 1 for char in alphabet] for letter in text] for text in text_vector]
-        return parsed_vector
+        self.train_data, self.validation_data = train_test_split(self.data, test_size=0.2)
 
     def get_corpus(self, data):
         corp_list = []
@@ -38,7 +34,22 @@ class DatasetCreator:
         return mappings
 
     def get_train_iterator(self, transform=None):
+        if transform is None:
+            transform = transforms.Compose([
+                RandomShuffle(),
+                RandomCharDelete(),
+                RandomStarPlace(),
+                StringVectorizer(self.corpus),
+                SequencePadder(35, self.corpus),
+
+            ])
         return StringDataset(self.train_data, transform)
 
-    def get_validation_iterator(self, transform=None):
+    def get_validation_iterator(self, transform=None):        
+        if transform is None:
+            transform = transforms.Compose([
+                StringVectorizer(self.corpus),
+                SequencePadder(35, self.corpus),
+
+            ])
         return StringDataset(self.validation_data, transform) 
