@@ -8,6 +8,14 @@ class RandomShuffle(object):
             sample = ''.join(l)
         return sample
 
+class RandomWordShuffle(object):
+    def __call__(self, sample):
+        if(0.25 > random.random()):
+            l = sample.split(' ')
+            random.shuffle(l)
+            sample = ' '.join(l)
+        return sample
+
 class RandomCharDelete(object):
     def __call__(self, sample):
         l = list(sample)

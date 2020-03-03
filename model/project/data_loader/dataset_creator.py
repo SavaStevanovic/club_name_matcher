@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 from data_loader.iterator import StringDataset
 from torchvision import transforms
 from data_loader.data_provider import getNamingDictFromFile, getUniversalNames
-from data_loader.augmentation import RandomShuffle, SequencePadder, StringVectorizer, RandomStarPlace, RandomCharDelete
+from data_loader.augmentation import RandomShuffle, SequencePadder, StringVectorizer, RandomStarPlace, RandomCharDelete, RandomWordShuffle
 
 class DatasetCreator:
     def __init__(self, root_dir, names_file):
@@ -36,14 +36,15 @@ class DatasetCreator:
     def get_train_iterator(self, transform=None):
         if transform is None:
             transform = transforms.Compose([
-                RandomShuffle(),
+                # RandomShuffle(),
+                RandomWordShuffle(),
                 RandomCharDelete(),
                 RandomStarPlace(),
                 StringVectorizer(self.corpus),
                 SequencePadder(35, self.corpus),
 
             ])
-        return StringDataset(self.train_data, transform)
+        return StringDataset(self.train_data, transform, True)
 
     def get_validation_iterator(self, transform=None):        
         if transform is None:
@@ -52,4 +53,4 @@ class DatasetCreator:
                 SequencePadder(35, self.corpus),
 
             ])
-        return StringDataset(self.validation_data, transform) 
+        return StringDataset(self.validation_data, transform, False) 

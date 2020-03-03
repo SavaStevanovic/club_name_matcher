@@ -38,11 +38,12 @@ def metrics( net, dataloader, epoch=1):
             predicted = loss < 0.5
             predictions+=predicted.cpu().numpy().tolist()
             labels+=label.cpu().numpy().tolist()
+    print("Class balance {}".format(sum(labels)/len(labels)))
     return f1_score(labels, predictions), accuracy_score(labels, predictions)
 
-def fit_epoch(net, trainloader, writer, epoch=1):
+def fit_epoch(net, trainloader, writer, lr_rate, epoch=1):
     net.train()
-    optimizer = optim.Adam(net.parameters())
+    optimizer = optim.Adam(net.parameters(), lr_rate)
     criterion = ContrastiveLoss()
     loss = 0.0
 
@@ -92,18 +93,26 @@ def fit(net, trainloader, validationloader, epochs=1000):
     log_datatime = str(datetime.now().time())
     writer = SummaryWriter(os.path.join('logs', log_datatime))
     best_f1 = 0
+    i = 0
+    lr_rate = 0.001
     for epoch in range(epochs):
-        fit_epoch(net, trainloader, writer, epoch=epoch)
+        fit_epoch(net, trainloader, writer, lr_rate, epoch=epoch)
         val_loss = validate_epoch(net, validationloader, writer, epoch)
-        # train_acc = accuracy(net, validationloader, epoch)
-        val_f1_score, val_acc = metrics(net, trainloader, epoch)
-        writer.add_scalars('metrics', {'val_acc':val_acc, 'val_f1_score':val_f1_score}, epoch)
+        train_f1_score, train_acc = metrics(net, trainloader, epoch)
+        val_f1_score, val_acc = metrics(net, validationloader, epoch)
+        writer.add_scalars('metrics', {'val_acc':val_acc, 'val_f1_score':val_f1_score, 'train_acc':train_acc, 'train_f1_score':train_f1_score}, epoch)
         if best_f1 < val_f1_score:
+            i=0
             best_f1 = val_f1_score
             print('Epoch {}. Saving model with acc: {}, and f1 score: {}'.format(epoch, val_acc, val_f1_score))
             chp_dir = 'checkpoints'
             os.makedirs((chp_dir), exist_ok=True)
             torch.save(net, os.path.join(chp_dir, 'checkpoints.pth'))
         else:
+            i+=1
             print('Epoch {} acc: {}, and f1 score: {}'.format(epoch, val_acc, val_f1_score))
+        if i==100:
+            lr_rate*=0.1
+            i=0
+            print("Learning rate lowered to {}".format(lr_rate))
     print('Finished Training')
