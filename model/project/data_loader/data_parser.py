@@ -19,26 +19,31 @@ def HelperMethod(un, argString, bookingName):
     result = result[name]
     return result
 
-def getNamingDictFromFile(bookingName, un, mapping_dict):
-    with open(os.path.join('dataset', bookingName), encoding='utf-8', mode = 'r') as fp:
+def getNamingDictFromFile(bookingNameFile, un, mapping_dict, league_dict):
+    with open(bookingNameFile, encoding='utf-8', mode = 'r') as fp:
         bookingNameDjson = fp.read()
         bookingNameD = json.loads(bookingNameDjson)
         for sportname in bookingNameD:
             if sportname == 'name':
-                bookingNameD[sportname] = HelperMethod(un, bookingNameD[sportname], bookingName)
+                bookingNameD[sportname] = HelperMethod(un, bookingNameD[sportname], bookingNameFile)
                 continue
             for liganame in bookingNameD[sportname]:
                 if liganame == 'name':
-                    bookingNameD[sportname]['name'] = HelperMethod(un, bookingNameD[sportname]['name'], bookingName)
+                    bookingNameD[sportname]['name'] = HelperMethod(un, bookingNameD[sportname]['name'], bookingNameFile)
                     continue
                 for teamname in bookingNameD[sportname][liganame]:
-                    if teamname.startswith('__') or teamname=='':
+                    if teamname.startswith('__') or teamname=='' or teamname=='name':
                         continue
                     # bookingNameD[sportname][liganame][teamname] = HelperMethod(un, bookingNameD[sportname][liganame][teamname], bookingName)
                     key = bookingNameD[sportname][liganame][teamname]
                     if key not in mapping_dict:
                         mapping_dict[key] = []
-                    mapping_dict[key] += [convert_to_valid_string(teamname)]
+                    valid_team_name = convert_to_valid_string(teamname)
+                    mapping_dict[key] += [valid_team_name]
+                    league_key = ','.join(key.split(',')[:-1])
+                    if league_key not in league_dict:
+                        league_dict[league_key] = []
+                    league_dict[league_key] += [key.split(',')[-1]]
         return mapping_dict
 
 def convert_to_valid_string(orig_string):

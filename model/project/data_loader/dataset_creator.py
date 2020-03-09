@@ -1,17 +1,17 @@
 import os 
 import numpy as np
 from sklearn.model_selection import train_test_split
-from data_loader.iterator import StringDataset
+from data_loader.iterator import StringDatasetTrain, StringDatasetValidation
 from torchvision import transforms
-from data_loader.data_provider import getNamingDictFromFile, getUniversalNames
+from data_loader.data_parser import getNamingDictFromFile, getUniversalNames
 from data_loader.augmentation import RandomShuffle, SequencePadder, StringVectorizer, RandomStarPlace, RandomCharDelete, RandomWordShuffle
 
 class DatasetCreator:
     def __init__(self, root_dir, names_file):
         self.universal_names = getUniversalNames(names_file)
-        self.data = self.parse_data(root_dir)
-        self.corpus, self.ocurences = self.get_corpus(self.data)
-        self.train_data, self.validation_data = train_test_split(self.data, test_size=0.2)
+        self.train_data, self.leagues  = self.parse_data(os.path.join(root_dir, 'train_data'))
+        self.validation_data, _ = self.parse_data(os.path.join(root_dir, 'validation_data'))
+        self.corpus, self.ocurences = self.get_corpus(list(self.train_data.values()))
 
     def get_corpus(self, data):
         corp_list = []
@@ -20,31 +20,33 @@ class DatasetCreator:
         joined_text = "".join(corp_list)
         corpus = set(joined_text)
         ocurences = {x:joined_text.count(x) for x in corpus}
-        # ocurences1 = sorted(ocurences.items(), key=lambda kv: kv[1])
         return corpus, ocurences
 
     def parse_data(self, root_dir):
-        self.mapping_dict = {}
+        mapping_dict = {}
+        league_dict = {}
         for x in os.listdir(root_dir):
-            getNamingDictFromFile(x, self.universal_names, self.mapping_dict) 
-        for x in self.mapping_dict:
-            self.mapping_dict[x] = list(set(self.mapping_dict[x]))
-        mappings = list(self.mapping_dict.values())
+            getNamingDictFromFile(os.path.join(root_dir, x), self.universal_names, mapping_dict, league_dict) 
+        for x in mapping_dict:
+            mapping_dict[x] = list(set(mapping_dict[x]))
 
-        return mappings
+        for x in league_dict:
+            league_dict[x] = list(set(league_dict[x]))
+
+        return mapping_dict, league_dict
 
     def get_train_iterator(self, transform=None):
         if transform is None:
             transform = transforms.Compose([
                 # RandomShuffle(),
-                RandomWordShuffle(),
-                RandomCharDelete(),
-                RandomStarPlace(),
+                # RandomWordShuffle(),
+                # RandomCharDelete(),
+                # RandomStarPlace(),
                 StringVectorizer(self.corpus),
                 SequencePadder(35, self.corpus),
 
             ])
-        return StringDataset(self.train_data, transform, True)
+        return StringDatasetTrain(self.train_data, transform)
 
     def get_validation_iterator(self, transform=None):        
         if transform is None:
@@ -53,4 +55,4 @@ class DatasetCreator:
                 SequencePadder(35, self.corpus),
 
             ])
-        return StringDataset(self.validation_data, transform, False) 
+        return StringDatasetValidation(self.validation_data, self.leagues, transform) 
