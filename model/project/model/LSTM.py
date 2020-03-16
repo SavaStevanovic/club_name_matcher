@@ -5,7 +5,7 @@ class LSTMNet(nn.Module):
 
     def __init__(self, input_size, hidden_dim, depth):
         super(LSTMNet, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_dim, bidirectional=False, num_layers=depth, dropout=0.0)
+        self.lstm = nn.LSTM(input_size, hidden_dim, bidirectional=False, num_layers=depth)
 
     def forward_once(self, x):
         lstm_out, (h_n, c_n) = self.lstm(x.permute(1, 0, 2))

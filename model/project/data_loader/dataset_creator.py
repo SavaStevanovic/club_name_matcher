@@ -39,9 +39,9 @@ class DatasetCreator:
         if transform is None:
             transform = transforms.Compose([
                 # RandomShuffle(),
-                # RandomWordShuffle(),
-                # RandomCharDelete(),
-                # RandomStarPlace(),
+                RandomWordShuffle(),
+                RandomCharDelete(),
+                RandomStarPlace(),
                 StringVectorizer(self.corpus),
                 SequencePadder(35, self.corpus),
 

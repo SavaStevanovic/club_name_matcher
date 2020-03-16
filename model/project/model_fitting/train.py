@@ -33,7 +33,7 @@ def fit_epoch(net, trainloader, writer, lr_rate, epoch=1):
 
     writer.add_scalar('training loss', loss/len(trainloader), epoch)
 
-def fit(net, trainloader, validationloader, epochs=1000):
+def fit(net, trainloader, validationloader, chp_prefix, epochs=1000, lower_learning_period=10):
     log_datatime = str(datetime.now().time())
     writer = SummaryWriter(os.path.join('logs', log_datatime))
     best_acc = 0
@@ -50,12 +50,15 @@ def fit(net, trainloader, validationloader, epochs=1000):
             print('Epoch {}. Saving model with acc: {}'.format(epoch, val_acc))
             chp_dir = 'checkpoints'
             os.makedirs((chp_dir), exist_ok=True)
-            torch.save(net, os.path.join(chp_dir, 'checkpoints.pth'))
+            torch.save(net, os.path.join(chp_dir, '{}_checkpoints.pth'.format(chp_prefix)))
+            with open(os.path.join(chp_dir, '{}_acc.txt'.format(chp_prefix)), 'w', encoding = 'utf-8') as f:
+                f.write(str(best_acc))
         else:
             i+=1
             print('Epoch {} acc: {}'.format(epoch, val_acc))
-        if i==100:
-            lr_rate*=0.1
+        if i==lower_learning_period:
+            lr_rate*=0.5
             i=0
             print("Learning rate lowered to {}".format(lr_rate))
     print('Finished Training')
+    return best_acc
